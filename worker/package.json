@@ -1,0 +1,16 @@
+{
+  "name": "gws-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Google Workspace API proxy on Cloudflare Workers — edge equivalent of the gws CLI",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241230.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.0.0"
+  }
+}

@@ -1,0 +1,45 @@
+name = "gws-worker"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+# KV namespace for storing OAuth tokens per user
+[[kv_namespaces]]
+binding = "TOKEN_STORE"
+id = "d75eaa95766f4224848fbd5d85176518"
+
+# Uncomment after creating with: npx wrangler d1 create gws-audit-log
+# [[d1_databases]]
+# binding = "AUDIT_LOG"
+# database_name = "gws-audit-log"
+# database_id = "PLACEHOLDER_D1_ID"
+
+[vars]
+# Non-secret config
+OAUTH_SCOPES = "https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/chat.messages https://www.googleapis.com/auth/admin.directory.user.readonly"
+
+# ── Google OAuth Secrets ──────────────────────────────────────────
+#
+# Option A: Secrets Store (recommended — shared across workers)
+#   Create a store and add secrets:
+#     npx wrangler secrets-store store create google-oauth --remote
+#     npx wrangler secrets-store secret create <STORE_ID> google-client-id --remote
+#     npx wrangler secrets-store secret create <STORE_ID> google-client-secret --remote
+#   Then uncomment and fill in your store_id below:
+#
+[[secrets_store_secrets]]
+binding = "GOOGLE_CLIENT_ID"
+store_id = "80cfe2b72651425ca937c4ec9a45ffa5"
+secret_name = "google-client-id"
+
+[[secrets_store_secrets]]
+binding = "GOOGLE_CLIENT_SECRET"
+store_id = "80cfe2b72651425ca937c4ec9a45ffa5"
+secret_name = "google-client-secret"
+#
+# Option B: Per-worker secrets (simpler, but not shared)
+#   npx wrangler secret put GOOGLE_CLIENT_ID
+#   npx wrangler secret put GOOGLE_CLIENT_SECRET
+#
+# Both options use the same env.GOOGLE_CLIENT_ID / env.GOOGLE_CLIENT_SECRET
+# bindings in code — the Worker handles both sync and async resolution.
