@@ -19,8 +19,9 @@ import {
 import { registerApiRoutes } from "./api";
 
 export interface Env extends OAuthEnv {
-  GOOGLE_CLIENT_ID: string;
-  GOOGLE_CLIENT_SECRET: string;
+  // Supports both per-worker secrets (string) and Secrets Store bindings (Promise<string>)
+  GOOGLE_CLIENT_ID: string | Promise<string>;
+  GOOGLE_CLIENT_SECRET: string | Promise<string>;
   OAUTH_SCOPES: string;
   TOKEN_STORE: KVNamespace;
 }
@@ -91,7 +92,7 @@ router.get("/auth/login", async (request, env) => {
 
   // State parameter to prevent CSRF
   const state = btoa(JSON.stringify({ userId, ts: Date.now() }));
-  const authUrl = buildAuthUrl(env, redirectUri, state);
+  const authUrl = await buildAuthUrl(env, redirectUri, state);
 
   return Response.redirect(authUrl, 302);
 });

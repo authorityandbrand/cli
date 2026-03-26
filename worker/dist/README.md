@@ -1,1 +1,1 @@
-This folder contains the built output assets for the worker "gws-worker" generated at 2026-03-26T16:19:37.983Z.
+This folder contains the built output assets for the worker "gws-worker" generated at 2026-03-26T18:07:32.205Z.

@@ -14,9 +14,17 @@ export interface TokenData {
   scope: string;
 }
 
+/**
+ * Env bindings for OAuth.
+ *
+ * GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET can be either:
+ *   - Per-worker secrets (string) set via `wrangler secret put`
+ *   - Secrets Store bindings (Promise<string>) via [[secrets_store_secrets]]
+ * The resolveSecret() helper handles both transparently.
+ */
 export interface OAuthEnv {
-  GOOGLE_CLIENT_ID: string;
-  GOOGLE_CLIENT_SECRET: string;
+  GOOGLE_CLIENT_ID: string | Promise<string>;
+  GOOGLE_CLIENT_SECRET: string | Promise<string>;
   OAUTH_SCOPES: string;
   TOKEN_STORE: KVNamespace;
 }
@@ -24,10 +32,19 @@ export interface OAuthEnv {
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 
+/**
+ * Resolve a secret that may be a plain string (per-worker secret)
+ * or a Promise<string> (Secrets Store binding).
+ */
+async function resolveSecret(secret: string | Promise<string>): Promise<string> {
+  return await secret;
+}
+
 /** Build the Google OAuth authorization URL. */
-export function buildAuthUrl(env: OAuthEnv, redirectUri: string, state: string): string {
+export async function buildAuthUrl(env: OAuthEnv, redirectUri: string, state: string): Promise<string> {
+  const clientId = await resolveSecret(env.GOOGLE_CLIENT_ID);
   const params = new URLSearchParams({
-    client_id: env.GOOGLE_CLIENT_ID,
+    client_id: clientId,
     redirect_uri: redirectUri,
     response_type: "code",
     scope: env.OAUTH_SCOPES,
@@ -44,12 +61,17 @@ export async function exchangeCode(
   code: string,
   redirectUri: string,
 ): Promise<TokenData> {
+  const [clientId, clientSecret] = await Promise.all([
+    resolveSecret(env.GOOGLE_CLIENT_ID),
+    resolveSecret(env.GOOGLE_CLIENT_SECRET),
+  ]);
+
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: env.GOOGLE_CLIENT_ID,
-      client_secret: env.GOOGLE_CLIENT_SECRET,
+      client_id: clientId,
+      client_secret: clientSecret,
       code,
       grant_type: "authorization_code",
       redirect_uri: redirectUri,
@@ -75,12 +97,17 @@ export async function refreshAccessToken(
   env: OAuthEnv,
   refreshToken: string,
 ): Promise<{ access_token: string; expires_at: number }> {
+  const [clientId, clientSecret] = await Promise.all([
+    resolveSecret(env.GOOGLE_CLIENT_ID),
+    resolveSecret(env.GOOGLE_CLIENT_SECRET),
+  ]);
+
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: env.GOOGLE_CLIENT_ID,
-      client_secret: env.GOOGLE_CLIENT_SECRET,
+      client_id: clientId,
+      client_secret: clientSecret,
       refresh_token: refreshToken,
       grant_type: "refresh_token",
     }),

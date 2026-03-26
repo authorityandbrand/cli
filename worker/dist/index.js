@@ -971,9 +971,14 @@ var Router = class {
 // src/oauth.ts
 var GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 var GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
-function buildAuthUrl(env2, redirectUri, state) {
+async function resolveSecret(secret) {
+  return await secret;
+}
+__name(resolveSecret, "resolveSecret");
+async function buildAuthUrl(env2, redirectUri, state) {
+  const clientId = await resolveSecret(env2.GOOGLE_CLIENT_ID);
   const params = new URLSearchParams({
-    client_id: env2.GOOGLE_CLIENT_ID,
+    client_id: clientId,
     redirect_uri: redirectUri,
     response_type: "code",
     scope: env2.OAUTH_SCOPES,
@@ -985,12 +990,16 @@ function buildAuthUrl(env2, redirectUri, state) {
 }
 __name(buildAuthUrl, "buildAuthUrl");
 async function exchangeCode(env2, code, redirectUri) {
+  const [clientId, clientSecret] = await Promise.all([
+    resolveSecret(env2.GOOGLE_CLIENT_ID),
+    resolveSecret(env2.GOOGLE_CLIENT_SECRET)
+  ]);
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: env2.GOOGLE_CLIENT_ID,
-      client_secret: env2.GOOGLE_CLIENT_SECRET,
+      client_id: clientId,
+      client_secret: clientSecret,
       code,
       grant_type: "authorization_code",
       redirect_uri: redirectUri
@@ -1010,12 +1019,16 @@ async function exchangeCode(env2, code, redirectUri) {
 }
 __name(exchangeCode, "exchangeCode");
 async function refreshAccessToken(env2, refreshToken) {
+  const [clientId, clientSecret] = await Promise.all([
+    resolveSecret(env2.GOOGLE_CLIENT_ID),
+    resolveSecret(env2.GOOGLE_CLIENT_SECRET)
+  ]);
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: env2.GOOGLE_CLIENT_ID,
-      client_secret: env2.GOOGLE_CLIENT_SECRET,
+      client_id: clientId,
+      client_secret: clientSecret,
       refresh_token: refreshToken,
       grant_type: "refresh_token"
     })
@@ -1316,7 +1329,7 @@ router.get("/auth/login", async (request, env2) => {
   const redirectUri = `${url.origin}/auth/callback`;
   const userId = request.headers.get("X-GWS-User") || "default";
   const state = btoa(JSON.stringify({ userId, ts: Date.now() }));
-  const authUrl = buildAuthUrl(env2, redirectUri, state);
+  const authUrl = await buildAuthUrl(env2, redirectUri, state);
   return Response.redirect(authUrl, 302);
 });
 router.get("/auth/callback", async (request, env2) => {
